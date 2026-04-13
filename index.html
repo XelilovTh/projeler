@@ -3,53 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS // FORENSICS | Deep Digital Fingerprint</title>
+    <title>Bekar Bəhməz</title>
     <link rel="stylesheet" href="style.css">
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Chart.js for Visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <style>
-        /* Yalnız ad üçün əlavə edilmiş minimal stil, mövcud strukturu pozmur */
-        .user-name-banner {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 100;
-            text-align: center;
-            padding: 8px 0;
-            background: linear-gradient(90deg, rgba(0,229,255,0.1) 0%, rgba(189,0,255,0.1) 100%);
-            backdrop-filter: blur(8px);
-            border-bottom: 1px solid var(--border-glow);
-            pointer-events: none;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 4px;
-            color: var(--accent-primary);
-            text-shadow: 0 0 15px var(--accent-primary);
-            box-shadow: 0 2px 20px rgba(0,0,0,0.3);
-        }
-        /* Mövcud layout-un yuxarıdan bir az boşluq alması üçün */
-        .app-container {
-            padding-top: 45px;
-        }
-        .status-panel {
-            padding-top: 28px;
-        }
-        .main-content {
-            padding-top: 28px;
-        }
-    </style>
+    <!-- Leaflet for Interactive Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-    <!-- Təhməz adı banneri - Başqa heç nə dəyişdirilmədi -->
-    <div class="user-name-banner">Təhmaz</div>
-
-    <div class="noise-overlay"></div>
-    <div class="grid-pattern"></div>
+    <div class="cyber-grid"></div>
+    <div class="scan-line"></div>
     
     <div class="app-container">
         <!-- Sidebar / Status Panel -->
@@ -59,11 +26,14 @@
                     <i class="fas fa-fingerprint"></i>
                 </div>
                 <h1>NEXUS<span class="accent-dot">.</span></h1>
-                <div class="version-badge">FORENSICS v3.1</div>
+                <div class="version-badge">FORENSICS v4.0</div>
             </div>
             
             <div class="session-card glass-card">
-                <div class="card-label">AKTİV SESSİYA</div>
+                <div class="card-label">
+                    <i class="fas fa-circle" style="color: var(--accent-success); font-size: 8px;"></i> 
+                    AKTİV SESSİYA
+                </div>
                 <div class="session-id-display">
                     <span class="session-prefix">ID//</span>
                     <span id="session-id-main" class="session-value">---</span>
@@ -81,22 +51,26 @@
             </div>
 
             <div class="risk-card glass-card">
-                <div class="card-label">TƏHLÜKƏSİZLİK SKORU</div>
+                <div class="card-label">
+                    <i class="fas fa-shield-halved"></i> 
+                    TƏHLÜKƏSİZLİK SKORU
+                </div>
                 <div class="risk-score-container">
                     <canvas id="riskGauge" width="120" height="120"></canvas>
                     <div class="risk-percentage" id="risk-percent">--%</div>
                 </div>
-                <div class="risk-factors" id="risk-factors">
-                    <!-- Dinamik olaraq doldurulacaq -->
-                </div>
+                <div class="risk-factors" id="risk-factors"></div>
             </div>
 
             <div class="actions-panel">
                 <button id="export-report-btn" class="primary-btn">
-                    <i class="fas fa-file-pdf"></i> HESABAT ÇIXAR
+                    <i class="fas fa-download"></i> HESABAT YÜKLƏ
                 </button>
                 <button id="copy-json-btn" class="secondary-btn">
-                    <i class="fas fa-code"></i> JSON KOPYALA
+                    <i class="fas fa-copy"></i> JSON KOPYALA
+                </button>
+                <button id="telegram-send-btn" class="secondary-btn" style="border-color: #0088cc;">
+                    <i class="fab fa-telegram-plane"></i> TELEGRAM'A GÖNDƏR
                 </button>
                 <button id="refresh-scan-btn" class="icon-btn" title="Yenidən Tara">
                     <i class="fas fa-sync-alt"></i>
@@ -104,7 +78,7 @@
             </div>
             
             <div class="footer-note">
-                <i class="fas fa-shield-hal"></i> BÜTÜN MƏLUMATLAR LOKAL ANALİZ OLUNUR
+                <i class="fas fa-lock"></i> BÜTÜN MƏLUMATLAR ŞİFRƏLİ KANAL İLƏ ÖTÜRÜLÜR
             </div>
         </aside>
 
@@ -131,10 +105,7 @@
                         </div>
                         <div class="card-title-group">
                             <h3>SİSTEM BARMAQ İZİ</h3>
-                            <span class="card-subtitle">OS / Brauzer / Kernel</span>
-                        </div>
-                        <div class="card-actions">
-                            <i class="fas fa-expand expand-card"></i>
+                            <span class="card-subtitle">OS / Brauzer / Kernel / WebGL</span>
                         </div>
                     </div>
                     <div class="card-body">
@@ -150,11 +121,12 @@
                         </div>
                         <div class="card-title-group">
                             <h3>ŞƏBƏKƏ &amp; GEO-LOKASİYA</h3>
-                            <span class="card-subtitle">IP / ISP / GPS / ASN</span>
+                            <span class="card-subtitle">IP / ISP / ASN / GPS / Proksi Deteksiyası</span>
                         </div>
                     </div>
                     <div class="card-body network-body">
-                        <div class="map-placeholder" id="geo-visual">
+                        <div class="map-container" id="map-container">
+                            <div id="leaflet-map" style="height: 200px; border-radius: 12px; margin-bottom: 15px;"></div>
                             <div class="geo-coords-large" id="geo-coords-display">
                                 <i class="fas fa-map-pin"></i> <span id="geo-coords-text">Koordinatlar gözlənilir...</span>
                             </div>
@@ -172,18 +144,18 @@
                         </div>
                         <div class="card-title-group">
                             <h3>APARAT RESURSLARI</h3>
-                            <span class="card-subtitle">CPU / RAM / GPU</span>
+                            <span class="card-subtitle">CPU / RAM / GPU / Batareya</span>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="hardware-charts">
                             <div class="chart-box">
                                 <canvas id="cpuChart" width="100" height="100"></canvas>
-                                <span class="chart-label">CPU</span>
+                                <span class="chart-label">CPU Nüvələri</span>
                             </div>
                             <div class="chart-box">
                                 <canvas id="ramChart" width="100" height="100"></canvas>
-                                <span class="chart-label">RAM</span>
+                                <span class="chart-label">RAM (GB)</span>
                             </div>
                         </div>
                         <div class="data-grid" id="hardware-grid"></div>
@@ -198,7 +170,7 @@
                         </div>
                         <div class="card-title-group">
                             <h3>ANOMALİYA DETEKSİYASI</h3>
-                            <span class="card-subtitle">VPN / Proksi / Risk Faktorları</span>
+                            <span class="card-subtitle">VPN / Proksi / Tor / Risk Faktorları</span>
                         </div>
                     </div>
                     <div class="card-body">
@@ -210,7 +182,7 @@
                 </div>
             </div>
             
-            <!-- Raw Data Footer (Collapsible) -->
+            <!-- Raw Data Footer -->
             <div class="raw-data-section">
                 <div class="raw-data-header" id="toggle-raw-data">
                     <span><i class="fas fa-brackets-curly"></i> XAM JSON MƏLUMATLARI</span>
@@ -218,6 +190,9 @@
                 </div>
                 <pre id="raw-json-output" class="raw-json" style="display: none;"></pre>
             </div>
+            
+            <!-- Telegram Status -->
+            <div id="telegram-status" class="telegram-status" style="display: none;"></div>
         </main>
     </div>
 
